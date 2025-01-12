@@ -56,9 +56,7 @@ const Navbar = () => {
     const toggleMobileDropdown = () =>
         setIsMobileDropdownOpen((prev) => !prev); // Toggle mobile dropdown
 
-    const toggleDesktopDropdown = () => {
-        setIsDesktopDropdownOpen((prev) => !prev); // Toggling state
-    };
+   
 
 
     // If it's not the client, return null to avoid hydration errors
