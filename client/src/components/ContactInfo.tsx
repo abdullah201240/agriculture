@@ -57,7 +57,7 @@ export default function ContactInfo() {
                                 <div className="space-y-4 text-white mt-10">
                                     <div className="flex items-center space-x-3">
                                         <FaEnvelope className="text-2xl text-[#20a320]" />
-                                        <h1 className="text-lg">Email: team.digirib@gmail.com</h1>
+                                        <h1 className="text-lg">Email: abc@gmail.com</h1>
                                     </div>
 
                                     <div className="flex items-center space-x-3">
