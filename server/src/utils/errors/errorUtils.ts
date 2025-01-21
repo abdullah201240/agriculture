@@ -27,10 +27,9 @@ export function formatErrorResponse(error: ApiError) {
  * @param fn - The async function to wrap
  */
 export const asyncHandler =
-  (fn: (req: Request, res: Response, next: NextFunction) => Promise<void>) =>
-  (req: Request, res: Response, next: NextFunction): void => {
+  (fn: (req: Request, res: Response, next: NextFunction) => Promise<any>) =>
+  (req: Request, res: Response, next: NextFunction): Promise<any> =>
     Promise.resolve(fn(req, res, next)).catch(next);
-  };
 
 /**
  * Logs detailed error information using Winston logger.

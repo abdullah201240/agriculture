@@ -26,6 +26,11 @@ export const ErrorCodes = {
       message: "Resource not found.",
       statusCode: 404,
     },
+    CONFLICT: { 
+      code: "CONFLICT", 
+      message: "Conflict", 
+      statusCode: 409 },
+
     
     // HTTP 500 - Internal Server Error
     INTERNAL_SERVER_ERROR: {
