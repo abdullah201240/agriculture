@@ -138,16 +138,16 @@ const UserNavbar = () => {
                                 Home
                             </Link>
                             <Link
-                                href="/aboutUs"
+                                href="/user/disease"
                                 className="px-3 py-2 text-medium font-medium text-white hover:bg-[#20a320] hover:text-white rounded-md"
                             >
-                                About Us
+                                Disease
                             </Link>
                             <Link
-                                href="/services"
+                                href="/user/profile"
                                 className="px-3 py-2 text-medium font-medium text-white hover:bg-[#20a320] hover:text-white rounded-md"
                             >
-                                Services
+                                Profile
                             </Link>
 
                             
