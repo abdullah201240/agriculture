@@ -41,7 +41,7 @@ export default function Page() {
       if (response.ok) {
         
         toast.success('Logged in successfully!');
-        localStorage.setItem('sessionToken', result.token); 
+        localStorage.setItem('sessionToken', result.data.accessToken); 
         router.push('/user/dashboard');
       } else {
         const errorData = await response.json();

@@ -131,7 +131,7 @@ const UserNavbar = () => {
                     <div className="hidden lg:block">
                         <div className="flex space-x-4">
                             <Link
-                                href="/"
+                                href="/user/dashboard"
                                 className="px-3 py-2 text-medium font-medium text-white hover:bg-[#20a320] hover:text-white rounded-md"
                                 aria-current="page"
                             >
