@@ -118,7 +118,7 @@ const UserNavbar = () => {
                             <Link href="/" className="text-white text-2xl font-semibold">
                                 <Image
                                     src={Logo}
-                                    alt="Digirib LOGO"
+                                    alt="LOGO"
                                     fill
                                     sizes="(max-width: 640px) 100px, (max-width: 768px) 120px, 120px"
                                     style={{ objectFit: "contain" }}
@@ -136,6 +136,12 @@ const UserNavbar = () => {
                                 aria-current="page"
                             >
                                 Home
+                            </Link>
+                            <Link
+                                href="/user/land"
+                                className="px-3 py-2 text-medium font-medium text-white hover:bg-[#20a320] hover:text-white rounded-md"
+                            >
+                                Land
                             </Link>
                             <Link
                                 href="/user/disease"
@@ -160,20 +166,10 @@ const UserNavbar = () => {
                                 href="/contactUs"
                                 className="px-3 py-2 text-medium font-medium text-white hover:bg-[#20a320] hover:text-white rounded-md"
                             >
-                                Contact Us
+                                Logout
                             </Link>
-                            <Link
-                                href="/signIn"
-                                className="px-3 py-2 text-medium font-medium text-white hover:bg-[#20a320] hover:text-white rounded-md"
-                            >
-                                Sign In
-                            </Link>
-                            <Link
-                                href="/signup"
-                                className="px-3 py-2 text-medium font-medium text-white hover:bg-[#20a320] hover:text-white rounded-md"
-                            >
-                                Sign Up
-                            </Link>
+                            
+                            
                         </div>
                     </div>
                 </div>

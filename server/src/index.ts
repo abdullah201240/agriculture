@@ -61,6 +61,7 @@ app.use("",routes);
 app.get('/', (req: Request, res: Response) => {
   res.send('Hello, TypeScript with Express!');
 });
+app.use('/uploads', express.static('uploads'));
 
 // Error-handling middleware
 app.use(errorMiddleware);

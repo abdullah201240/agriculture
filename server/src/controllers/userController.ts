@@ -6,8 +6,17 @@ import User from "../models/user";
 import bcrypt from 'bcryptjs';
 import ERROR_MESSAGES from '../utils/errors/errorMassage'
 import jwt from 'jsonwebtoken';
+import axios from 'axios';
+import Disease from "../models/disease";
+import fs from 'fs';
+import FormData from 'form-data';
+import dotenv from "dotenv";
+import path from "path";
 
+// Load environment variables from .env file
+dotenv.config();
 const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET || "LD9cv1kBfgRHVIg9GG_OGzh9TUkcyqgZAaM0o3DmVkx08MCFRSzMocyO3UtNdDNtoCJ0X0-5nLwK7fdO"; // Fallback to a hardcoded secret if not in env
+
 
 
 
@@ -203,5 +212,93 @@ export const logoutUser = asyncHandler(
         "User logged out successfully"
       )
     );
+  }
+);
+
+
+export const checkDisease = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No image provided" });
+      }
+
+      const { userId } = req.body;
+
+      if (!userId) {
+        return next(new ApiError("User does not exist", 404, ErrorCodes.NOT_FOUND.code));
+      }
+
+      const imagePath = req.file.path;
+      const filename = path.basename(imagePath); // Ensures only the filename is stored
+
+      // Check if the file exists before proceeding
+      try {
+        await fs.promises.access(imagePath);
+      } catch (err) {
+        return next(new ApiError("Uploaded image file not found", 400));
+      }
+
+      // Prepare image for API request
+      const formData = new FormData();
+      formData.append("image", fs.createReadStream(imagePath));
+
+      // Use the environment variable for the API URL
+      const predictionApiUrl = process.env.PREDICTION_API_URL;
+
+      if (!predictionApiUrl) {
+        return next(new ApiError("Prediction API URL is not defined in the environment", 500));
+      }
+
+      // Call external prediction API
+      const response = await axios.post(`${predictionApiUrl}/predict`, formData, {
+        headers: {
+          ...formData.getHeaders(),
+        },
+      });
+
+      if (!response.data || !response.data.predicted_class) {
+        return next(new ApiError("Failed to retrieve prediction from API", 500));
+      }
+
+      const predictedClass = response.data.predicted_class;
+
+      // Save result in database
+      const newDisease = await Disease.create({
+        image: filename, // Store only the filename
+        predicted_class: predictedClass,
+        userId,
+      });
+
+      res.status(201).json({
+        message: "Disease prediction stored successfully",
+        data: newDisease,
+      });
+    } catch (error: any) {
+      next(new ApiError(error.message || "Internal Server Error", error.status || 500));
+    }
+  }
+);
+
+
+export const getPredictions = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params;
+
+      if (!id) {
+        return next(new ApiError("ID parameter is required", 400));
+      }
+
+      const diseases = await Disease.findAll({ where: { userId: id } });
+
+      if (!diseases || diseases.length === 0) {
+        return next(new ApiError("No results found", 404));
+      }
+
+      res.status(200).json({ success: true, data: diseases });
+    } catch (error) {
+      next(error);
+    }
   }
 );
