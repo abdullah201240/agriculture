@@ -12,10 +12,13 @@ import fs from 'fs';
 import FormData from 'form-data';
 import dotenv from "dotenv";
 import path from "path";
+import Land from "../models/land";
+import RainFall from "../models/rainFall";
 
 // Load environment variables from .env file
 dotenv.config();
 const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET || "LD9cv1kBfgRHVIg9GG_OGzh9TUkcyqgZAaM0o3DmVkx08MCFRSzMocyO3UtNdDNtoCJ0X0-5nLwK7fdO"; // Fallback to a hardcoded secret if not in env
+let deviceData: any = null;
 
 
 
@@ -251,7 +254,7 @@ export const checkDisease = asyncHandler(
       }
 
       // Call external prediction API
-      const response = await axios.post(`${predictionApiUrl}/predict`, formData, {
+      const response = await axios.post(`${predictionApiUrl}/predict_image`, formData, {
         headers: {
           ...formData.getHeaders(),
         },
@@ -302,3 +305,215 @@ export const getPredictions = asyncHandler(
     }
   }
 );
+export const deletePredictions = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { id } = req.params;
+
+    const deleteWork = await Disease.findByPk(id);
+
+    if (!deleteWork) {
+      throw new ApiError('Disease not found', 404, 'NOT_FOUND');
+    }
+
+    await deleteWork.destroy();
+
+    return res.status(200).json(
+      ApiResponse.success(null, 'Disease deleted successfully')
+    );
+  }
+);
+
+
+export const deleteLand = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { id } = req.params;
+
+    const deleteLand = await Land.findByPk(id);
+
+    if (!deleteLand) {
+      throw new ApiError('Land not found', 404, 'NOT_FOUND');
+    }
+
+    await deleteLand.destroy();
+
+    return res.status(200).json(
+      ApiResponse.success(null, 'Land deleted successfully')
+    );
+  }
+);
+
+// Get all lands by userId
+export const getAllLandsByUserId = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { id } = req.params;
+
+    const lands = await Land.findAll({
+      where: { userId: id },
+    });
+
+    return res.status(200).json(
+      ApiResponse.success(lands, 'Lands retrieved successfully')
+    );
+  }
+);
+
+// Create a new land entry
+export const createLand = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { landName, userId } = req.body;
+    if (!landName || !userId) {
+      throw new ApiError('landName and userId are required', 400, 'BAD_REQUEST');
+    }
+
+    const newLand = await Land.create({ landName, userId });
+
+    return res.status(201).json(
+      ApiResponse.success(newLand, 'Land created successfully')
+    );
+  }
+);
+
+export const createCrops = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { land, userId, position, date } = req.body;
+
+    if (!land || !userId || !position || !date) {
+      throw new ApiError("All fields are required", 400, "BAD_REQUEST");
+    }
+
+    // Fetch land details
+    const lands = await Land.findByPk(land);
+    if (!lands) {
+      throw new ApiError("Land not found", 404, "BAD_REQUEST");
+    }
+    const landsName = lands.landName;
+
+    try {
+      // Fetch device data
+      const deviceResponse = await axios.get("http://localhost:8080/user/call-insert");
+      if (!deviceResponse.data || !deviceResponse.data.data) {
+        throw new ApiError("Failed to retrieve device data", 500, "BAD_REQUEST");
+      }
+
+      const deviceData = deviceResponse.data.data;
+
+      // Ensure deviceData contains all necessary properties
+      const { pH, nitrogen: N, phosphorus: P, potassium: K, soilTemperature: temperature, soilMoisture: humidity } = deviceData;
+
+      if (pH === undefined || N === undefined || P === undefined || K === undefined || temperature === undefined || humidity === undefined) {
+        throw new ApiError("Incomplete soil data from device", 400, "BAD_REQUEST");
+      }
+      const monthNames = [
+        "JAN", "FEB", "MAR", "APR", "MAY", "JUN",
+        "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"
+      ];
+      
+      const currentMonthName = monthNames[new Date().getMonth()];      console.log(currentMonthName)
+      const rain = await RainFall.findOne({ where:{
+        city:'Dhaka',
+        month:currentMonthName
+
+
+      }  });
+      if(!rain){
+        throw new ApiError("Rain not found", 404, "BAD_REQUEST");
+
+      }
+
+
+      const rainfall = rain.rainfall; // Static value
+
+
+      // Get Prediction API URL
+      const predictionApiUrl = process.env.PREDICTION_API_URL;
+      if (!predictionApiUrl) {
+        return next(new ApiError("Prediction API URL is not defined in the environment", 500));
+      }
+
+      // Log data before making the API request
+      // console.log("Sending data to prediction API:", {
+      //   pH,
+      //   N,
+      //   P,
+      //   K,
+      //   temperature,
+      //   humidity,
+      //   rainfall
+      // });
+
+      // Call external prediction API
+      const response = await axios.post(`${predictionApiUrl}/predict_crop`, {
+        ph: pH, // Convert pH to lowercase to match API requirement
+        N,
+        P,
+        K,
+        temperature,
+        humidity,
+        rainfall
+      });
+
+      // console.log("API Response:", response.data);
+
+      if (!response.data || !response.data.recommended_crop) {
+        return next(new ApiError("Failed to retrieve prediction from API", 500));
+      }
+
+      const predictedClass = response.data.recommended_crop;
+
+      return res.status(201).json(
+        ApiResponse.success(
+          {
+            land: landsName,
+            userId,
+            position,
+            date,
+            soilData: { pH, N, P, K, temperature, humidity, rainfall },
+            prediction: predictedClass
+          },
+          "Crop prediction successful"
+        )
+      );
+    } catch (error) {
+      console.error("Error communicating with APIs:", error);
+      return next(new ApiError("Error retrieving data", 500));
+    }
+  }
+);
+
+
+
+export const insertAllData = async (req: Request, res: Response): Promise<any> => {
+  // console.log("Received request at /insert with data:", req.body);
+
+  // Check if the request body is empty
+  if (!req.body || Object.keys(req.body).length === 0) {
+    res.status(400).json({ message: "Request body is empty" });
+    return;
+  }
+
+  // Simulate a delay (5 seconds) for receiving IoT data
+  setTimeout(() => {
+    deviceData = req.body; // Store the data from the IoT device
+    // console.log("Data received from IoT device:", deviceData);
+  }, 5000);
+
+  // Respond with a message indicating that the data creation is in progress
+  res.status(201).json({
+    message: "Data created successfully, you can check the status later.",
+  });
+};
+
+export const getDataStatus = async (req: Request, res: Response): Promise<any> => {
+  // If the data is not available yet, return a 404 error
+  if (!deviceData) {
+    res.status(404).json({ message: "Data is not yet available. Please try again later." });
+    return;
+  }
+
+  // Return the data if it's available
+  res.status(200).json({
+    message: "Data retrieved successfully",
+    data: deviceData,
+  });
+};
+

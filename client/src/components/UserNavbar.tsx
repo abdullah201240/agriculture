@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import Logo from "@/app/assets/logo.png";
+import { useRouter } from "next/navigation";
+import { toast } from 'react-hot-toast';
 
 const UserNavbar = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -15,6 +17,42 @@ const UserNavbar = () => {
 
     // Create a ref for the dropdown
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const router = useRouter();
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+    const handleLogout = async () => {
+        if (isLoggingOut) return; // Prevent multiple clicks
+        setIsLoggingOut(true);
+        const accessToken = localStorage.getItem('sessionToken');
+
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}user/auth/logout`, {
+                method: "POST",
+                credentials: "include", // Ensure cookies are sent
+                headers: {
+                    'Authorization': `${accessToken}`, // Send token in the Authorization header
+                },
+            });
+
+            if (response.ok) {
+                // Remove token from localStorage
+                localStorage.removeItem("sessionToken");
+                toast.success('Log out successful');
+
+                // Redirect to the login page
+                router.push("/signIn");
+            } else {
+                toast.error('Logout failed');
+            }
+        } catch (error) {
+            if (error) {
+                toast.error('Logout failed');
+
+            }
+        } finally {
+            setIsLoggingOut(false);
+        }
+    };
     useEffect(() => {
         setIsClient(true);
         const handleScroll = () => {
@@ -56,7 +94,7 @@ const UserNavbar = () => {
     const toggleMobileDropdown = () =>
         setIsMobileDropdownOpen((prev) => !prev); // Toggle mobile dropdown
 
-  
+
 
 
     // If it's not the client, return null to avoid hydration errors
@@ -156,20 +194,19 @@ const UserNavbar = () => {
                                 Profile
                             </Link>
 
-                            
 
 
 
 
-
-                            <Link
-                                href="/contactUs"
+                            <button
                                 className="px-3 py-2 text-medium font-medium text-white hover:bg-[#20a320] hover:text-white rounded-md"
+                                onClick={handleLogout}
+                                disabled={isLoggingOut}
                             >
                                 Logout
-                            </Link>
-                            
-                            
+                            </button>
+
+
                         </div>
                     </div>
                 </div>
