@@ -1,5 +1,5 @@
 import express from "express";
-import { checkDisease, createCrops, createLand, createUser, deleteLand, deletePredictions, getAllLandsByUserId, getDataStatus, getPredictions, getProfile, insertAllData, loginUser, logoutUser } from "../controllers/userController";
+import { checkDisease, createCrops, createLand, createUser, deleteLand, deletePredictions, getAllCropsByUserId, getAllLandsByUserId, getDataStatus, getPredictions, getProfile, insertAllData, loginUser, logoutUser } from "../controllers/userController";
 import { verifyJWT } from "../middleware/auth";
 import { uploadMiddleware } from "../middleware/upload";
 
@@ -19,6 +19,8 @@ router.delete("/land/:id", verifyJWT, deleteLand);
 router.post("/test", insertAllData);
 router.get("/call-insert", getDataStatus);  
 router.post("/crops", createCrops);
+router.get("/crops/:id", getAllCropsByUserId);  
+
 
 
 export default router;

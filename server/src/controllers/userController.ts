@@ -14,6 +14,7 @@ import dotenv from "dotenv";
 import path from "path";
 import Land from "../models/land";
 import RainFall from "../models/rainFall";
+import Crop from "../models/crop";
 
 // Load environment variables from .env file
 dotenv.config();
@@ -388,7 +389,7 @@ export const createCrops = asyncHandler(
     }
     const landsName = lands.landName;
 
-    try {
+    
       // Fetch device data
       const deviceResponse = await axios.get("http://localhost:8080/user/call-insert");
       if (!deviceResponse.data || !deviceResponse.data.data) {
@@ -419,9 +420,10 @@ export const createCrops = asyncHandler(
         throw new ApiError("Rain not found", 404, "BAD_REQUEST");
 
       }
-
-
-      const rainfall = rain.rainfall; // Static value
+      let rainfall = parseFloat(rain.rainfall); // Convert to number if necessary
+      if (isNaN(rainfall)) {
+        throw new ApiError("Invalid rainfall value", 400, "BAD_REQUEST");
+      }
 
 
       // Get Prediction API URL
@@ -430,16 +432,7 @@ export const createCrops = asyncHandler(
         return next(new ApiError("Prediction API URL is not defined in the environment", 500));
       }
 
-      // Log data before making the API request
-      // console.log("Sending data to prediction API:", {
-      //   pH,
-      //   N,
-      //   P,
-      //   K,
-      //   temperature,
-      //   humidity,
-      //   rainfall
-      // });
+    
 
       // Call external prediction API
       const response = await axios.post(`${predictionApiUrl}/predict_crop`, {
@@ -452,13 +445,62 @@ export const createCrops = asyncHandler(
         rainfall
       });
 
-      // console.log("API Response:", response.data);
 
       if (!response.data || !response.data.recommended_crop) {
         return next(new ApiError("Failed to retrieve prediction from API", 500));
       }
 
       const predictedClass = response.data.recommended_crop;
+
+     // Check if the crop entry already exists with the same landId and date
+     const existingCrop = await Crop.findOne({
+      where: {
+        landId: land,
+        date, 
+        position
+      }
+    });
+      
+    if (existingCrop) {
+      // If the entry exists, update it
+      existingCrop.landName = landsName;
+      existingCrop.userId = userId;
+      existingCrop.position = position;
+      existingCrop.pH = pH;
+      existingCrop.nitrogen = N;
+      existingCrop.phosphorus = P;
+      existingCrop.potassium = K;
+      existingCrop.temperature = temperature;
+      existingCrop.humidity = humidity;
+      existingCrop.rainfall = rainfall;
+      existingCrop.prediction = predictedClass;
+
+      await existingCrop.save();
+
+      return res.status(200).json(
+        ApiResponse.success(existingCrop, "Crop data updated successfully")
+      );
+    } else {
+      // If the entry doesn't exist, create a new one
+      const newCrop = await Crop.create({
+        landId: land,
+        landName: landsName,
+        userId,
+        position,
+        date,
+        pH,
+        nitrogen: N,
+        phosphorus: P,
+        potassium: K,
+        temperature,
+        humidity,
+        rainfall,
+        prediction: predictedClass
+      })
+    }
+      
+      
+      
 
       return res.status(201).json(
         ApiResponse.success(
@@ -473,13 +515,23 @@ export const createCrops = asyncHandler(
           "Crop prediction successful"
         )
       );
-    } catch (error) {
-      console.error("Error communicating with APIs:", error);
-      return next(new ApiError("Error retrieving data", 500));
-    }
+   
   }
 );
 
+export const getAllCropsByUserId = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { id } = req.params;
+
+    const lands = await Crop.findAll({
+      where: { userId: id },
+    });
+
+    return res.status(200).json(
+      ApiResponse.success(lands, 'Lands retrieved successfully')
+    );
+  }
+);
 
 
 export const insertAllData = async (req: Request, res: Response): Promise<any> => {

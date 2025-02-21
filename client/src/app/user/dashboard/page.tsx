@@ -9,9 +9,25 @@ interface Land {
 interface EmployeeDetails {
   id: string;
 }
+interface Crop {
+  id: string;
+  landName: string;
+  position: string;
+  date: string;
+  pH: number;
+  nitrogen: number;
+  phosphorus: number;
+  potassium: number;
+  temperature: number;
+  humidity: number;
+  rainfall: number;
+  prediction: string;
+}
 export default function Page() {
   const router = useRouter();
   const [lands, setLands] = useState<Land[]>([]);
+  const [crops, setCrops] = useState<Crop[]>([]);
+
   const [selectedLand, setSelectedLand] = useState<string>('');
   const [selectedPosition, setSelectedPosition] = useState<string>('');
   const [date, setDate] = useState<string>('');
@@ -79,6 +95,30 @@ export default function Page() {
       console.error("Error fetching lands:", error);
     }
   }, []);
+
+  const fetchCrops = useCallback(async (userId: string) => {
+    if (!userId) return;
+    const token = localStorage.getItem('sessionToken');
+
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}user/crops/${userId}`, {
+        headers: { Authorization: token || "" },
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setCrops(data.data);
+      }
+    } catch (error) {
+      console.error("Error fetching lands:", error);
+    }
+  }, []);
+  useEffect(() => {
+    if (employeeDetails?.id) {
+      fetchCrops(employeeDetails.id);
+    }
+  }, [employeeDetails, fetchCrops]);
+
   useEffect(() => {
     if (employeeDetails?.id) {
       fetchLands(employeeDetails.id);
@@ -106,6 +146,8 @@ export default function Page() {
       const result = await response.json();
       if (response.ok) {
         alert('Appointment booked successfully!');
+        await fetchCrops(employeeDetails.id)
+      
       } else {
         alert(result.message || 'Failed to book appointment.');
       }
@@ -116,6 +158,9 @@ export default function Page() {
   };
 
   return (
+    <div>
+
+   
     <div className='mt-16 flex items-center justify-center p-12'>
       <div className="mx-auto w-full max-w-[550px] bg-white p-6 rounded-lg shadow-lg">
         <form onSubmit={handleSubmit}>
@@ -184,11 +229,63 @@ export default function Page() {
               type="submit"
               className="w-full rounded-md bg-blue-600 py-3 px-8 text-white font-semibold hover:bg-blue-700"
             >
-              Book Appointment
+              Start
             </button>
           </div>
         </form>
       </div>
+      
+    </div>
+    <h1 className='text-center text-xl font-bold mt-8'>All Records</h1>
+
+    <div className='mt-4 flex items-center justify-center p-12'>
+
+    <div className="w-full max-w-4xl">
+        <table className="min-w-full bg-white border rounded-lg shadow-md">
+          <thead>
+            <tr className="bg-gray-200">
+              <th className="py-2 px-4 border">Land Name</th>
+              <th className="py-2 px-4 border">Position</th>
+              <th className="py-2 px-4 border">Date</th>
+              <th className="py-2 px-4 border">pH</th>
+              <th className="py-2 px-4 border">Nitrogen</th>
+              <th className="py-2 px-4 border">Phosphorus</th>
+
+              <th className="py-2 px-4 border">Potassium</th>
+
+              <th className="py-2 px-4 border">Temperature</th>
+              <th className="py-2 px-4 border">Humidity</th>
+              <th className="py-2 px-4 border">Rainfall</th>
+
+
+
+              <th className="py-2 px-4 border">Prediction</th>
+            </tr>
+          </thead>
+          <tbody>
+            {crops.map((crop) => (
+              <tr key={crop.id} className="border">
+                <td className="py-2 px-4 border">{crop.landName}</td>
+                <td className="py-2 px-4 border">{crop.position}</td>
+                <td className="py-2 px-4 border">{crop.date}</td>
+                <td className="py-2 px-4 border">{crop.pH}</td>
+                <td className="py-2 px-4 border">{crop.nitrogen}</td>
+                <td className="py-2 px-4 border">{crop.phosphorus}</td>
+
+                <td className="py-2 px-4 border">{crop.potassium}</td>
+
+                <td className="py-2 px-4 border">{crop.temperature}</td>
+                <td className="py-2 px-4 border">{crop.humidity}</td>
+
+                <td className="py-2 px-4 border">{crop.rainfall}</td>
+
+                <td className="py-2 px-4 border">{crop.prediction}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
     </div>
   );
 }
